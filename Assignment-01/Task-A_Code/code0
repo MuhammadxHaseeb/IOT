@@ -1,0 +1,326 @@
+#include <Arduino.h>
+#define LED1 19
+#define LED2 18
+#define LED3 5
+
+#define BTN_MODE 34
+#define BTN_RESET 35
+
+volatile int mode = 0;
+volatile int alt_Mode = 1;
+
+// For Interrupt
+volatile bool modeChanged = false;
+volatile bool resetPressed = false;
+
+// Debounce Via Millis()
+unsigned long lastModePress = 0;
+unsigned long lastResetPress = 0;
+const unsigned long debounceDelay = 200; // 200 ms debounce
+
+unsigned long previousMillis = 0;
+bool ledState = LOW;
+
+void IRAM_ATTR BTN_Pressed_Mode() {
+  unsigned long currentTime = millis();
+  if (currentTime - lastModePress > debounceDelay) {
+    modeChanged = true;
+    lastModePress = currentTime;
+  }
+}
+
+void IRAM_ATTR BTN_Pressed_Reset() {
+  unsigned long currentTime = millis();
+  if (currentTime - lastResetPress > debounceDelay) {
+    resetPressed = true;
+    lastResetPress = currentTime;
+  }
+}
+
+void setup() {
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(BTN_MODE, INPUT_PULLUP);
+  pinMode(BTN_RESET, INPUT_PULLUP);
+
+  //  Default OFF
+  digitalWrite(LED1, LOW);
+  digitalWrite(LED2, LOW);
+  digitalWrite(LED3, LOW);
+
+
+  //  Using Interrupt
+  attachInterrupt(digitalPinToInterrupt(BTN_MODE), BTN_Pressed_Mode, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BTN_RESET), BTN_Pressed_Reset, FALLING);
+}
+
+void loop() {
+  // Reset logic
+  if (resetPressed) {
+    mode = 0;
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED2, LOW);
+    digitalWrite(LED3, LOW);
+
+    resetPressed = false;
+  }
+
+  // Mode change logic
+  if (modeChanged) {
+    mode++;
+    if (mode > 3) mode = 0;
+    modeChanged = false;
+  }
+
+  // LED behavior
+  switch (mode) {
+    case 0: // OFF (default/reset)
+      digitalWrite(LED1, LOW);
+      digitalWrite(LED2, LOW);
+      digitalWrite(LED3, LOW);
+      
+      break;
+
+    case 1: // OFF
+      digitalWrite(LED1, LOW);
+      digitalWrite(LED2, LOW);
+      digitalWrite(LED3, LOW);
+      
+      break;
+
+    case 2: // BLINK (non-blocking using millis)
+      if(alt_Mode>3)
+      {
+        alt_Mode=1;
+      }
+      if (millis() - previousMillis >= 500) { // toggle every 0.5s
+        previousMillis = millis();
+        ledState = !ledState;
+
+        switch (alt_Mode)
+        {
+          case 1:
+          digitalWrite(LED1, ledState);
+          digitalWrite(LED2, LOW);
+          digitalWrite(LED3, LOW);
+          alt_Mode++;
+          break;
+          case 2:
+          digitalWrite(LED1, LOW);
+          digitalWrite(LED2, ledState);
+          digitalWrite(LED3, LOW);
+          alt_Mode++;
+          break;
+          case 3:
+          digitalWrite(LED1, LOW);
+          digitalWrite(LED2, LOW);
+          digitalWrite(LED3, ledState);
+          alt_Mode++;
+          break;
+        }
+      
+      }
+      break;
+
+    case 3: // ON
+      digitalWrite(LED1, HIGH);
+      digitalWrite(LED2, HIGH);
+      digitalWrite(LED3, HIGH);
+      
+      break;
+
+  }
+}
+
+
+
+
+
+
+
+// // #include <Arduino.h>
+// // #include <Wire.h>
+// // #include <Adafruit_GFX.h>
+// // #include <Adafruit_SSD1306.h>
+
+// // #define SCREEN_WIDTH 128
+// // #define SCREEN_HEIGHT 64
+// // Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// // #define LED1 19
+// // #define LED2 18
+// // #define LED3 5
+
+// // #define BTN_MODE 26
+// // #define BTN_RESET 25
+
+// // volatile int mode = 0;
+// // volatile int alt_Mode = 1;
+
+// // // For Interrupt
+// // volatile bool modeChanged = false;
+// // volatile bool resetPressed = false;
+
+// // // Debounce Via Millis()
+// // unsigned long lastModePress = 0;
+// // unsigned long lastResetPress = 0;
+// // const unsigned long debounceDelay = 200; // 200 ms debounce
+
+// // unsigned long previousMillis = 0;
+// // bool ledState = LOW;
+
+// // #define PWM_CH 0
+// // #define FREQ 5000
+// // #define RES 8
+
+
+// // int brightness = 0;
+// // int fadeAmount = 15;
+// // unsigned long lastFade = 0;
+
+
+// // void IRAM_ATTR BTN_Pressed_Mode() {
+// //   unsigned long currentTime = millis();
+// //   if (currentTime - lastModePress > debounceDelay) {
+// //     modeChanged = true;
+// //     lastModePress = currentTime;
+// //   }
+// // }
+
+// // void IRAM_ATTR BTN_Pressed_Reset() {
+// //   unsigned long currentTime = millis();
+// //   if (currentTime - lastResetPress > debounceDelay) {
+// //     resetPressed = true;
+// //     lastResetPress = currentTime;
+// //   }
+// // }
+
+// // void showMode(const char* text) {
+// //   display.clearDisplay();
+// //   display.setTextSize(2);
+// //   display.setTextColor(SSD1306_WHITE);
+// //   display.setCursor((SCREEN_WIDTH - strlen(text) * 12) / 2, (SCREEN_HEIGHT - 16) / 2);
+// //   display.print(text);
+// //   display.display();
+// // }
+
+
+// // void setup() {
+// //   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+// //     for (;;); // Don't proceed if OLED not found
+// //   }
+// //   display.clearDisplay();
+// //   display.setTextColor(SSD1306_WHITE);
+  
+// //   display.setTextSize(2); // Bigger text
+// //   display.setCursor(10, 25);
+// //   display.println("Mode 0: OFF");
+// //   display.display();
+
+// //   pinMode(LED1, OUTPUT);
+// //   pinMode(LED2, OUTPUT);
+// //   pinMode(BTN_MODE, INPUT_PULLUP);
+// //   pinMode(BTN_RESET, INPUT_PULLUP);
+
+// //   //  Default OFF
+// //   digitalWrite(LED1, LOW);
+// //   digitalWrite(LED2, LOW);
+// //   digitalWrite(LED3, LOW);
+
+
+// //   //  Using Interrupt
+// //   attachInterrupt(digitalPinToInterrupt(BTN_MODE), BTN_Pressed_Mode, FALLING);
+// //   attachInterrupt(digitalPinToInterrupt(BTN_RESET), BTN_Pressed_Reset, FALLING);
+
+// //   ledcSetup(PWM_CH, FREQ, RES);
+// //   ledcAttachPin(LED3, PWM_CH);
+
+// // }
+
+// // void loop() {
+// //   // Reset logic
+// //   if (resetPressed) {
+// //     mode = 0;
+// //     digitalWrite(LED1, LOW);
+// //     digitalWrite(LED2, LOW);
+
+// //     resetPressed = false;
+// //     showMode("Default");
+    
+// //   }
+
+// //   // Mode change logic
+// //   if (modeChanged) {
+// //     mode++;
+// //     if (mode > 4) mode = 0;
+// //     modeChanged = false;
+// //   }
+
+// //   // LED behavior
+// //   switch (mode) {
+// //     case 0: // OFF (default/reset)
+// //       showMode("Default");
+
+// //       digitalWrite(LED1, LOW);
+// //       digitalWrite(LED2, LOW);
+// //       ledcWrite(PWM_CH, 0);
+      
+// //       break;
+
+// //     case 1: // OFF
+// //       showMode("Both OFF");
+      
+// //       digitalWrite(LED1, LOW);
+// //       digitalWrite(LED2, LOW);
+// //       ledcWrite(PWM_CH, 0);
+// //       break;
+
+// //     case 2: // Alternate blink
+// //       showMode("Blinking");
+        
+
+// //       if (millis() - previousMillis >= 500) {
+// //         previousMillis = millis();
+// //         ledState = !ledState;
+      
+// //         if (ledState) {
+// //           digitalWrite(LED1, HIGH);
+// //           digitalWrite(LED2, LOW);
+// //         } else {
+// //           digitalWrite(LED1, LOW);
+// //           digitalWrite(LED2, HIGH);
+// //         }
+// //       }
+// //       break;
+
+// //     case 3: // ON
+// //       showMode("Both ON");  
+
+// //       digitalWrite(LED1, HIGH);
+// //       digitalWrite(LED2, HIGH);
+// //       ledcWrite(PWM_CH, 0);
+      
+// //       break;
+    
+// //     case 4:
+// //       showMode("PWM");
+      
+// //       digitalWrite(LED1, LOW);
+// //       digitalWrite(LED2, LOW);
+      
+// //       if (millis() - lastFade >= 2) {  // every 20 ms fade step
+// //         lastFade = millis();
+// //         ledcWrite(PWM_CH, brightness);
+// //         brightness += fadeAmount;
+// //         if (brightness <= 0 || brightness >= 255) fadeAmount = -fadeAmount;
+// //       }
+// //       break;  
+// //     }
+// // }
+
+
+
+
+
+
